@@ -1,0 +1,30 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables / secrets — never commit real keys!
+.env
+.env.*
+!.env.example
+
+# Generated output (recreated on every run)
+resume.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Tooling
+.omo/
+.codegraph/
