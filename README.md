@@ -21,7 +21,7 @@ Drop your resumes in as `.txt` files, run one command, and get a clean, validate
 ### 1. Clone & install
 
 ```bash
-git clone https://github.com/<your-user>/resumeDataParse.git
+git clone https://github.com/nayaksomkar/resumeDataParse.git
 cd resumeDataParse
 uv sync
 ```
