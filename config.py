@@ -1,36 +1,49 @@
 """Configuration for the resume parser.
 
-Central place for the extraction prompt and the input folder path so the
+Central place for the summarization and extraction prompts and the input folder path so the
 rest of the code never hard-codes these values.
 """
 
-# System prompt handed to the LLM. The two placeholders are injected at
-# runtime by the LangChain chain:
-#   {format_instructions} -> Pydantic schema description (from Resume model)
-#   {resume_text}         -> the raw resume content being parsed
-prompt = """
-You are an expert resume information extraction system.
+# The first stage turns the complete input into a detail-preserving summary.
+# Keeping this separate from schema extraction prevents the structured parser
+# from having to interpret formatting and omissions in the original resume.
+summary_prompt = """
+You are an expert resume summarization system.
 
-Your task is to analyze the provided resume text and extract all relevant information.
-
-Instructions:
-
-- Extract information accurately.
-- Use only information present in the resume.
-- Do not invent missing details.
-- If a field is unavailable, return an empty string or empty list.
-- Extract skills as individual items.
-- Extract work experiences as separate list entries.
-- Extract projects as separate list entries.
-- Extract education entries as separate list items.
-- Extract certifications as separate list items.
-- Create a concise professional summary based on the resume content.
-
-{format_instructions}
+Read all of the resume text below before answering. Produce a comprehensive,
+fact-preserving summary that includes every piece of useful information:
+candidate identity and contact details, skills, every role and achievement,
+projects and technologies, education, certifications, dates, employers,
+locations, links, and other notable details. Preserve the distinctions
+between sections and between separate experiences or projects. Do not omit
+details to make the summary shorter, and do not infer or invent information.
+If the input contains unusual formatting, still capture its text.
 
 Resume Text:
 
 {resume_text}
+"""
+
+# The second stage parses only the comprehensive summary into the validated
+# structured schema. The placeholders are injected at runtime:
+#   {format_instructions} -> Pydantic schema instructions
+#   {resume_summary}     -> output from summary_prompt
+parse_prompt = """
+You are an expert resume information extraction system.
+
+Extract all information from the comprehensive resume summary below.
+Use only information present in the summary; never invent missing details.
+Preserve every relevant item, including all experience, projects, education,
+certifications, skills, dates, and contact details. Keep separate entries
+separate. If a field is unavailable, return an empty string or empty list.
+Write the `summary` field as a concise professional overview grounded in the
+provided content.
+
+{format_instructions}
+
+Comprehensive Resume Summary:
+
+{resume_summary}
 """
 
 # Folder containing the plain-text (.txt) resumes to parse.

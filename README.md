@@ -2,15 +2,32 @@
 
 Extract structured resume data from plain-text resumes using a **LangChain** pipeline backed by **NVIDIA NIM** (`openai/gpt-oss-20b`).
 
-Drop your resumes in as `.txt` files, run one command, and get a clean, validated `resume.json` — name, contact details, skills, experience, projects, education, certifications, and a professional summary — all in one shot.
+Drop your resumes in as `.txt` or `.pdf` files, run one command, and get a clean, validated `resume.json` — name, contact details, skills, experience, projects, education, certifications, and a professional summary.
 
 ## ✨ Features
 
-- **LLM-powered extraction** — no brittle regex, the model reads the whole resume.
+- **Two-stage LLM pipeline** — the model first summarizes all resume text without
+  dropping details, then parses that summary into the structured schema.
 - **Guaranteed schema** — a Pydantic model validates every output; missing sections default to empty values instead of crashing.
-- **Batch processing** — parses every `.txt` file in `resume_txt/` in one run.
+- **Batch processing** — extracts every `.txt` and `.pdf` file in `resume_txt/` in one run.
 - **Deterministic output** — files are processed in sorted order, so `resume.json` is stable across runs.
 - **uv-first** — one-command setup and run via [uv](https://docs.astral.sh/uv/).
+
+## 🔄 Parsing Pipeline
+
+Each resume is processed in two deliberate stages:
+
+1. **Comprehensive summarization** — the first model call reads the complete
+   resume text and creates a fact-preserving summary containing all available
+   contact details, skills, experience, achievements, projects, technologies,
+   education, certifications, dates, links, and other useful information.
+2. **Structured parsing** — the second model call extracts every relevant item
+   from that summary into the validated `Resume` schema. Missing fields remain
+   empty, and the model is instructed not to infer or invent details.
+
+Both stages use a temperature of `0` to make results as consistent as possible
+between runs. This extra summarization stage helps prevent details from being
+lost when resumes contain long content or unusual formatting.
 
 ## 🚀 Quick Start
 
@@ -40,7 +57,7 @@ NVIDIA_API_KEY=nvapi-your-key-here
 
 ### 3. Add resumes
 
-Place one plain-text resume per file in [`resume_txt/`](resume_txt/):
+Place one `.txt` or `.pdf` resume per file in [`resume_txt/`](resume_txt/). PDF text is extracted page by page before summarization:
 
 ```text
 Aarav Sharma
@@ -119,11 +136,14 @@ Parsed results are appended to [`resume.json`](resume.json):
 2. Each resume from [`resume_txt/`](resume_txt/) flows through:
 
    ```
+   ChatPromptTemplate ──► ChatNVIDIA ──► detail-preserving summary
+                                             │
+                                             ▼
    ChatPromptTemplate ──► ChatNVIDIA (gpt-oss-20b) ──► PydanticOutputParser
    ```
 
-   - The **prompt** tells the model what to extract and injects the schema.
-   - The **LLM** reads the resume and responds with the extracted fields.
+   - The first **prompt** reads all text and creates a comprehensive summary.
+   - The second **prompt** extracts fields from that summary and injects the schema.
    - The **parser** validates the response against the `Resume` model.
 3. Each validated result is appended to `resume.json`.
 
@@ -133,7 +153,7 @@ Parsed results are appended to [`resume.json`](resume.json):
 resumeDataParse/
 ├── main.py          # Entry point — builds the chain and orchestrates the run
 ├── parserMain.py    # Pydantic `Resume` schema (output contract)
-├── config.py        # Extraction prompt + input folder path
+├── config.py        # Summarization/extraction prompts + input folder path
 ├── mainfunc.py      # File-reading and JSON persistence helpers
 ├── resume_txt/      # Drop your .txt resumes here
 ├── resume.json      # Generated output (gitignored, recreated on each run)
